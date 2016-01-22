@@ -12,11 +12,11 @@ digipad.digipad_formspec =	-- Defines the grid of buttons
 	"button[3,1;1,1;chan1;Chan 1]button[3,2;1,1;chan2;Chan 2]button[3,3;1,1;chan3;Chan 3]"
 
 digipad.hidecode = function(len)
-	if     (len == 0 or len==nil) then return "" -- not sure if needed
-	else
-		return string.rep("*",len)
+	assert(len, "[digipad] hidecode: missing code length")
+	if len == 0 then
+		return "" -- not sure if needed
 	end
-
+	return string.rep("*", len)
 end
 
 digipad.submit = function (pos, channel, number)
@@ -31,52 +31,47 @@ digipad.cons = function (pos)
 	meta:set_string("baseChannel", "keypad");
 	meta:set_int("channelExt",1)
 end
+
 digipad.recvFields = function(pos,formname,fields,sender)
 	local meta = minetest.get_meta(pos)
-	local node=minetest.get_node(pos)
-	local rules=mesecon.rules.buttonlike_get(node)
-	local baseChannel=meta:get_string("baseChannel")
-	local ext=meta:get_int("channelExt")
-	local code=meta:get_string("code")
-	if fields.dcA then  --Accept button
-		if code~="" then
-			digipad.submit(pos, (baseChannel..ext), code)
-			--print(meta:get_string("baseChannel"))
---~ 			else
---~ 				meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-		end
-		meta:set_string("code","")
-	elseif fields.dcC then -- Cancel button
+	if fields.dcC then -- Cancel button
 		meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-		meta:set_string("code","")
-	elseif fields.chan1 then --Set Channel 1
-		meta:set_int("channelExt",1)
-	elseif fields.chan2 then --Set Channel 2
-		meta:set_int("channelExt",2)
-	elseif fields.chan3 then --Set Channel 3
-		meta:set_int("channelExt",3)
-	else
-		local button=nil;
-		if     fields.dc0 then button="0"
-		elseif fields.dc1 then button="1"
-		elseif fields.dc2 then button="2"
-		elseif fields.dc3 then button="3"
-		elseif fields.dc4 then button="4"
-		elseif fields.dc5 then button="5"
-		elseif fields.dc6 then button="6"
-		elseif fields.dc7 then button="7"
-		elseif fields.dc8 then button="8"
-		elseif fields.dc9 then button="9"
-		end
-		if button then  -- if button ~= nil (ie a number button was pressed)
-			if string.len(meta:get_string("code")) >= 10 then -- If code is really long, submit & start over
-				digipad.submit(pos, (baseChannel..ext), code)
-				meta:set_string("code","")
-			end
-			meta:set_string("code",meta:get_string("code")..button)
+		meta:set_string("code", "")
+		return
+	end
+	for i = 1,3 do -- Channel button
+		if fields["chan"..i] then
+			meta:set_int("channelExt", i)
+			return
 		end
 	end
-	meta:set_string("formspec",digipad.digipad_formspec.."label[1,0;"..digipad.hidecode(meta:get_string("code"):len()).."]")
+	local code = meta:get_string("code")
+	if fields.dcA then  --Accept button
+		if code == "" then
+			return
+		end
+		digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
+		meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
+		meta:set_string("code", "")
+		return
+	end
+	-- Number button
+	local codelen = string.len(code)
+	for button = 0,9 do
+		button = tostring(button)
+		if fields["dc"..button] then
+			if codelen < 10 then
+				meta:set_string("code", code..button)
+				codelen = codelen+1
+			else -- If code is really long, submit & start over
+				digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
+				meta:set_string("code", button)
+				codelen = 1
+			end
+			meta:set_string("formspec", digipad.digipad_formspec.."label[1,0;"..digipad.hidecode(codelen).."]")
+			return
+		end
+	end
 end
 
 -- ========================
@@ -101,25 +96,23 @@ minetest.register_node("digipad:digipad", {
 	inventory_image = "digicode_front.png",
 	selection_box = {
 		type = "fixed",
-		fixed = { -6/16, -.5, 6/16, 6/16, .5, 8/16 }
+		fixed = { -6/16, -.5, 6/16, 6/16, .5, .5 }
 	},
 	node_box = {
 		type = "fixed",
-		fixed = { -6/16, -.5, 6/16, 6/16, .5, 8/16 }
+		fixed = { -6/16, -.5, 6/17, 6/16, .5, .5 }
 	},
-	digiline =
-	{
-		receptor={},
+	digiline = {
+		receptor = {},
 	},
 	groups = {choppy = 3, dig_immediate = 2},
 	sounds = default.node_sound_stone_defaults(),
 	on_construct = function(pos)	--Initialize some variables (local per instance)
-		local meta = minetest.get_meta(pos)
 		digipad.cons(pos)
-		meta:set_string("infotext", "Digipad")
+		minetest.get_meta(pos):set_string("infotext", "Digipad")
 	end,
-	on_receive_fields = function(pos,formname,fields,sender)
-		digipad.recvFields(pos,formname,fields,sender)
+	on_receive_fields = function(...)
+		digipad.recvFields(...)
 	end
 
 })
@@ -156,8 +149,8 @@ minetest.register_node("digipad:digipad_hard", {
 		digipad.cons(pos)
 		meta:set_string("infotext", "Hardened Digipad")
 	end,
-	on_receive_fields = function(pos,formname,fields,sender)
-		digipad.recvFields(pos,formname,fields,sender)
+	on_receive_fields = function(...)
+		digipad.recvFields(...)
 	end
 })
 
