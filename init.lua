@@ -10,13 +10,13 @@ digipad.digipad_formspec =	-- Defines the grid of buttons
 	"button[0,3;1,1;dc7;7]button[1,3;1,1;dc8;8]button[2,3;1,1;dc9;9]"..
 	"button_exit[0,4;1,1;dcC;Cancel]button[1,4;1,1;dc0;0]button_exit[2,4;1,1;dcA;Submit]"..
 	"button[3,1;1,1;chan1;Chan 1]button[3,2;1,1;chan2;Chan 2]button[3,3;1,1;chan3;Chan 3]"
-	
+
 digipad.hidecode = function(len)
 	if     (len == 0 or len==nil) then return "" -- not sure if needed
-	else 
+	else
 		return string.rep("*",len)
 	end
-	
+
 end
 
 digipad.submit = function (pos, channel, number)
@@ -25,15 +25,15 @@ digipad.submit = function (pos, channel, number)
 end
 
 digipad.cons = function (pos)
-	local meta = minetest.env:get_meta(pos)
+	local meta = minetest.get_meta(pos)
 	meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
 	meta:set_string("code", "")
 	meta:set_string("baseChannel", "keypad");
 	meta:set_int("channelExt",1)
 end
 digipad.recvFields = function(pos,formname,fields,sender)
-	local meta = minetest.env:get_meta(pos)
-	local node=minetest.env:get_node(pos)
+	local meta = minetest.get_meta(pos)
+	local node=minetest.get_node(pos)
 	local rules=mesecon.rules.buttonlike_get(node)
 	local baseChannel=meta:get_string("baseChannel")
 	local ext=meta:get_int("channelExt")
@@ -42,17 +42,17 @@ digipad.recvFields = function(pos,formname,fields,sender)
 		if code~="" then
 			digipad.submit(pos, (baseChannel..ext), code)
 			--print(meta:get_string("baseChannel"))
---~ 			else 
+--~ 			else
 --~ 				meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
 		end
 		meta:set_string("code","")
 	elseif fields.dcC then -- Cancel button
 		meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-		meta:set_string("code","")  
+		meta:set_string("code","")
 	elseif fields.chan1 then --Set Channel 1
-		meta:set_int("channelExt",1) 
+		meta:set_int("channelExt",1)
 	elseif fields.chan2 then --Set Channel 2
-		meta:set_int("channelExt",2) 
+		meta:set_int("channelExt",2)
 	elseif fields.chan3 then --Set Channel 3
 		meta:set_int("channelExt",3)
 	else
@@ -107,21 +107,21 @@ minetest.register_node("digipad:digipad", {
 		type = "fixed",
 		fixed = { -6/16, -.5, 6/16, 6/16, .5, 8/16 }
 	},
-	digiline = 
+	digiline =
 	{
 		receptor={},
 	},
 	groups = {choppy = 3, dig_immediate = 2},
 	sounds = default.node_sound_stone_defaults(),
 	on_construct = function(pos)	--Initialize some variables (local per instance)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		digipad.cons(pos)
 		meta:set_string("infotext", "Digipad")
 	end,
 	on_receive_fields = function(pos,formname,fields,sender)
 		digipad.recvFields(pos,formname,fields,sender)
 	end
-		
+
 })
 
 minetest.register_node("digipad:digipad_hard", {
@@ -139,7 +139,7 @@ minetest.register_node("digipad:digipad_hard", {
 	paramtype2 = "facedir",
 	sunlight_propagates = true,
 	walkable = true,
-	digiline = 
+	digiline =
 	{
 		receptor={},
 	},
@@ -152,7 +152,7 @@ minetest.register_node("digipad:digipad_hard", {
 	inventory_image="digipad_hard_front.png",
 	groups = {cracky=1,level=2},
 	on_construct = function(pos)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		digipad.cons(pos)
 		meta:set_string("infotext", "Hardened Digipad")
 	end,

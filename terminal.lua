@@ -2,7 +2,7 @@
 -- Variable declarations
 -- ================
 
-digipad.keyb_form_first = 
+digipad.keyb_form_first =
 "size[4,1;]"..
 "field[0,0;2,1;chan;Channel;]"..
 "label[0,0;Channel "
@@ -27,7 +27,7 @@ digipad.terminal_formspec =
 -- Function declarations
 -- ================
 digipad.get_keyb_formspec = function(pos)  -- Construct updated formspec for keyboard
-local meta = minetest.env:get_meta(pos)
+local meta = minetest.get_meta(pos)
 local current_chan = meta:get_string("chan_num")
 new_formspec = "size[4,1;]"..
 "field[0,0;2,1;chan;Channel;" .. current_chan .. "]"..
@@ -37,7 +37,7 @@ return new_formspec
 end
 
 digipad.set_channel = function(pos, new_channel)
-local meta = minetest.env:get_meta(pos)
+local meta = minetest.get_meta(pos)
 meta:set_string("channel", new_channel)
 end
 
@@ -53,13 +53,13 @@ digipad.delete_spaces = function(s)
 end
 
 digipad.clear = function(pos)
-	local meta = minetest.env:get_meta(pos)
+	local meta = minetest.get_meta(pos)
 	print("clearing screen")
 	meta:set_string("formspec", digipad.terminal_formspec) -- reset to default formspec
 	meta:set_int("lines", 0)  -- start at the top of the screen again
 end
 
-digipad.parse_cmd = function(pos, cmd)	
+digipad.parse_cmd = function(pos, cmd)
 	if cmd == "clear" then
 		digipad.clear(pos)
 	elseif cmd == "help" then
@@ -88,13 +88,13 @@ end
  digipad.new_line = function(pos, text)
 	local max_chars = 40
 	local max_lines = 10
-	local meta = minetest.env:get_meta(pos)
-	local lines = meta:get_int("lines")	
+	local meta = minetest.get_meta(pos)
+	local lines = meta:get_int("lines")
 	if lines > max_lines then  -- clear screen before printing the line - so it's never blank
 		digipad.clear(pos)
 		lines = meta:get_int("lines") --update after clear
 	end
-	
+
 	local formspec = meta:get_string("formspec")
 	local offset = lines / 4
 	line = string.sub(text, 1, max_chars) -- take first chars
@@ -103,7 +103,7 @@ end
 	lines = lines + 1
 	meta:set_int("lines", lines)
 	meta:set_string("formspec", new_formspec)
-	
+
 	if string.len(text) > max_chars then -- If not all could be printed, recurse on the rest of the string
 		text = string.sub(text,max_chars)
 		digipad.new_line(pos, text)
@@ -114,14 +114,14 @@ end
 -- ================
 -- Node declarations
 -- ================
- 
+
 minetest.register_node("digipad:keyb", {
 	description = "Digiline keyboard",
 	paramtype = "light",
 	paramtype2 = "facedir",
 	sunlight_propagates = true,
 	walkable = true,
-	digiline = 
+	digiline =
 		{
 			receptor={},
 			effector={},
@@ -134,31 +134,31 @@ minetest.register_node("digipad:keyb", {
 		"digicode_side.png",
 		"digicode_side.png"
 	},
-	
+
 	drawtype = "nodebox",
 	selection_box = {
 		type ="fixed",
 		fixed = {-0.500000,-0.500000,-0.000000,0.500000,-0.3,0.5}, -- Keyboard
-	
+
 	},
 	node_box = {
 		type ="fixed",
 		fixed = {-0.500000,-0.500000,-0.000000,0.500000,-0.3,0.5}, -- Keyboard
-	
+
 	},
 	groups = {dig_immediate = 2},
 	on_construct = function(pos)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		meta:set_string("formspec", digipad.keyb_formspec)
 		meta:set_string("Infotext", "Keyboard")
 		 -- set default channel (base + default extension) :
 		meta:set_string("channel", digipad.keyb_base_chan .. digipad.keyb_def_chan)
 	end,
 	on_receive_fields = function(pos, formname, fields, sender)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		local channel = meta:get_string("channel")
 		local text = fields.input
-		if (fields.chan ~= "") and (fields.chan ~= nil) then 
+		if (fields.chan ~= "") and (fields.chan ~= nil) then
 			local chan_num = fields.chan
 			meta:set_string("chan_num", chan_num) -- save user's channel suffix choice
 			channel = digipad.keyb_base_chan .. chan_num
@@ -167,10 +167,10 @@ minetest.register_node("digipad:keyb", {
 		if text ~= nil then
 			digiline:receptor_send(pos, digiline.rules.default, channel, text)
 		end
-		
+
 		meta:set_string("formspec", digipad.get_keyb_formspec(pos))-- generate new formspec
 	end,
-	
+
 })
 
 minetest.register_node("digipad:terminal", {
@@ -202,7 +202,7 @@ minetest.register_node("digipad:terminal", {
 		"digicode_side.png",
 		"terminal_front.png"
 	},
-	digiline = 
+	digiline =
 		{
 			receptor={},
 			effector = {
@@ -211,23 +211,23 @@ minetest.register_node("digipad:terminal", {
 		},
 	groups = {dig_immediate = 2},
 	on_construct = function(pos)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		meta:set_string("formspec", digipad.terminal_formspec)
 		meta:set_string("Infotext", "Terminal")
 		meta:set_int("lines", 0)
 		-- set default channel (base + default extension) :
 		meta:set_string("channel", digipad.term_base_chan .. digipad.term_def_chan)
-		
+
 		digipad.new_line(pos, "/help for help")  -- print welcome text
 	end,
 	on_receive_fields = function(pos, formname, fields, sender)
-		local meta = minetest.env:get_meta(pos)
+		local meta = minetest.get_meta(pos)
 		local text = fields.input
 		local channel = meta:get_string("channel")
 		print(channel)
 		if text ~= nil then
 			digipad.new_line(pos, "> " .. text)
-			
+
 			if string.sub(text,1,1) == "/" then  -- command is for terminal
 				text = string.sub(text, 2) -- cut off first char
 				digipad.parse_cmd(pos, text)
