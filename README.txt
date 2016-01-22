@@ -15,3 +15,7 @@ Default suffix is "1", making  the channel "tty1".  "/help" will display a help 
 See also - https://github.com/lordcirth/minetest-wireless adds wireless
 transmitters/receivers - excellent for passworded doors with no traceable
 wire.  Just link a digipad to a wireless transmitter, and a receiver to the luacontroller for the door.
+
+TODO:
+— fix missing action field bug
+— no formspec control
