@@ -17,5 +17,4 @@ transmitters/receivers - excellent for passworded doors with no traceable
 wire.  Just link a digipad to a wireless transmitter, and a receiver to the luacontroller for the door.
 
 TODO:
-— fix missing action field bug
-— no formspec control
+— better sound and more sounds

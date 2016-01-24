@@ -21,10 +21,10 @@ end
 
 digipad.submit = function (pos, channel, number)
 	--minetest.chat_send_player("singleplayer", "Code is "..number)
-	digiline:receptor_send(pos, digiline.rules.default, channel, number)
+	digiline:receptor_send(pos, digiline.rules.default, channel, tonumber(number))
 end
 
-digipad.cons = function (pos)
+digipad.cons = function(pos)
 	local meta = minetest.get_meta(pos)
 	meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
 	meta:set_string("code", "")
@@ -32,21 +32,29 @@ digipad.cons = function (pos)
 	meta:set_int("channelExt",1)
 end
 
-digipad.recvFields = function(pos,formname,fields,sender)
-	local meta = minetest.get_meta(pos)
-	if fields.dcC then -- Cancel button
-		meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-		meta:set_string("code", "")
-		return
-	end
-	for i = 1,3 do -- Channel button
-		if fields["chan"..i] then
-			meta:set_int("channelExt", i)
-			return
-		end
-	end
+local function beep(pos)
+	minetest.sound_play("digipad_beep", {pos = pos, gain = .5})
+end
+
+local function press_number_button(pos, meta, button)
+	beep(pos)
 	local code = meta:get_string("code")
-	if fields.dcA then  --Accept button
+	local codelen = #code --string.len(code)
+	if codelen < 10 then
+		meta:set_string("code", code..button)
+		codelen = codelen+1
+	else -- If code is really long, submit & start over
+		digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
+		meta:set_string("code", button)
+		codelen = 1
+	end
+	meta:set_string("formspec", digipad.digipad_formspec.."label[1,0;"..digipad.hidecode(codelen).."]")
+end
+
+-- accept or cancel
+local function press_aoc(pos, meta, accept)
+	if accept then
+		local code = meta:get_string("code")
 		if code == "" then
 			return
 		end
@@ -55,24 +63,145 @@ digipad.recvFields = function(pos,formname,fields,sender)
 		meta:set_string("code", "")
 		return
 	end
-	-- Number button
-	local codelen = string.len(code)
-	for button = 0,9 do
-		button = tostring(button)
-		if fields["dc"..button] then
-			if codelen < 10 then
-				meta:set_string("code", code..button)
-				codelen = codelen+1
-			else -- If code is really long, submit & start over
-				digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
-				meta:set_string("code", button)
-				codelen = 1
-			end
-			meta:set_string("formspec", digipad.digipad_formspec.."label[1,0;"..digipad.hidecode(codelen).."]")
+	meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
+	meta:set_string("code", "")
+end
+
+digipad.recvFields = function(pos, _, fields)
+	local meta = minetest.get_meta(pos)
+	if fields.dcC then -- Cancel button
+		press_aoc(pos, meta)
+		return
+	end
+	if fields.dcA then  --Accept button
+		press_aoc(pos, meta, true)
+		return
+	end
+	for i = 1,3 do -- Channel button
+		if fields["chan"..i] then
+			meta:set_int("channelExt", i)
 			return
 		end
 	end
+	-- Number button
+	local id = next(fields)
+	local button = fields[id]
+	if "dc"..button ~= id then
+		return -- ESC pressed
+	end
+	press_number_button(pos, meta, button)
 end
+
+local button_order = {
+	{1, 2, 3},
+	{4, 5, 6},
+	{7, 8, 9},
+	{"c",0,"v"},
+}
+
+-- used for setting the code outside a formspec
+local function punch_pad(pos, node, puncher, pt)
+	if not (pos and node and puncher and pt) then
+		return
+	end
+	-- abort if the node is punched not on the frontside
+	if minetest.dir_to_facedir(vector.subtract(pt.under, pt.above)) ~= node.param2 then
+		return
+	end
+	local dir = puncher:get_look_dir()
+	local dist = vector.new(dir)
+
+	local plpos = puncher:getpos()
+	plpos.y = plpos.y+1.625
+
+	local newtime,a,b,c,mpa,mpc
+	b = "y"
+	if node.param2 == 0 then
+		a = "x"
+		c = "z"
+	elseif node.param2 == 1 then
+		a = "z"
+		c = "x"
+		mpa = -1
+	elseif node.param2 == 2 then
+		a = "x"
+		c = "z"
+		mpc = -1
+		mpa = -1
+	elseif node.param2 == 3 then
+		a = "z"
+		c = "x"
+		mpc = -1
+	else
+		return
+	end
+
+	mpa = mpa or 1
+	mpc = mpc or 1
+	local shpos = {[a]=pos[a], [b]=pos[b], [c]=pos[c]+6/16*mpc}
+
+	dist[c] = shpos[c]-plpos[c]
+	local m = dist[c]/dir[c]
+	dist[a] = dist[a]*m
+	dist[b] = dist[b]*m
+
+	-- the exact position where it's pointed
+	local newp = vector.add(plpos, dist)
+
+	-- the exact position relative to the middle of the rect [-0.5,0.5]
+	local tp = vector.subtract(newp, shpos)
+	tp[a] = tp[a]*mpa
+	tp[b] = -tp[b]
+
+	local vert = tp[b]*32+16
+
+	if vert < 6 then
+		return
+	end
+	local line
+	if vert < 12.5 then
+		line = 1
+	elseif vert < 18.5 then
+		line = 2
+	elseif vert < 24.5 then
+		line = 3
+	elseif vert <= 31 then
+		line = 4
+	else
+		return
+	end
+
+	local hor = tp[a]*32+16
+
+	if hor < 5 then
+		return
+	end
+	local row
+	if hor < 12 then
+		row = 1
+	elseif hor < 20 then
+		row = 2
+	elseif hor <= 27 then
+		row = 3
+	else
+		return
+	end
+
+	local button = button_order[line][row]
+	local meta = minetest.get_meta(pos)
+	if button == "c" then
+		press_aoc(pos, meta)
+	elseif button == "v" then
+		press_aoc(pos, meta, true)
+	else
+		press_number_button(pos, meta, tostring(button))
+	end
+
+	--[[ send the pressed buttons
+	local pname = puncher:get_player_name()
+	minetest.chat_send_player(pname, "button pressed: "..button)--]]
+end
+
 
 -- ========================
 -- Begin node declarations
@@ -100,10 +229,7 @@ minetest.register_node("digipad:digipad", {
 	},
 	node_box = {
 		type = "fixed",
-		fixed = { -6/16, -.5, 6/17, 6/16, .5, .5 }
-	},
-	digiline = {
-		receptor = {},
+		fixed = { -6/16, -.5, 6/16, 6/16, .5, .5 }
 	},
 	groups = {choppy = 3, dig_immediate = 2},
 	sounds = default.node_sound_stone_defaults(),
@@ -113,8 +239,9 @@ minetest.register_node("digipad:digipad", {
 	end,
 	on_receive_fields = function(...)
 		digipad.recvFields(...)
-	end
-
+	end,
+	on_punch = punch_pad,
+	digiline = {receptor={action=function()end}},
 })
 
 minetest.register_node("digipad:digipad_hard", {
@@ -151,7 +278,8 @@ minetest.register_node("digipad:digipad_hard", {
 	end,
 	on_receive_fields = function(...)
 		digipad.recvFields(...)
-	end
+	end,
+	on_punch = punch_pad,
 })
 
 -- ========================

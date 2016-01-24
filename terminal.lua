@@ -20,7 +20,7 @@ digipad.keyb_formspec = digipad.keyb_form_first .. digipad.keyb_base_chan ..
 	digipad.keyb_def_chan  .. digipad.keyb_form_second
 
 digipad.terminal_formspec =
-	"size[4,5;]"..
+	"size[5,5.1;]"..
 	"field[0,5;5,1;input;;]"
 
 -- ================
