@@ -29,25 +29,41 @@ end
 digipad.cons = function(pos)
 	local meta = minetest.get_meta(pos)
 	meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-	meta:set_string("code", "")
 	meta:set_string("baseChannel", "keypad");
 	meta:set_int("channelExt",1)
 end
 
 local function beep(pos)
-	minetest.sound_play("digipad_beep", {pos = pos, gain = .5})
+	minetest.sound_play("digipad_beep", {pos = pos, gain = .2})
+end
+
+
+-- functions from vector_extras
+local set = vector.set_data_to_pos
+local get = vector.get_data_from_pos
+local remove = vector.remove_data_from_pos
+
+local code_cache = {}
+local function get_code(pos)
+	return get(code_cache, pos.z,pos.y,pos.x) or ""
+end
+local function set_code(pos, code)
+	set(code_cache, pos.z,pos.y,pos.x, code)
+end
+local function remove_code(pos)
+	remove(code_cache, pos.z,pos.y,pos.x)
 end
 
 local function press_number_button(pos, meta, button)
 	beep(pos)
-	local code = meta:get_string("code")
+	local code = get_code(pos)
 	local codelen = #code --string.len(code)
 	if codelen < 10 then
-		meta:set_string("code", code..button)
+		set_code(pos, code..button)
 		codelen = codelen+1
 	else -- If code is really long, submit & start over
 		digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
-		meta:set_string("code", button)
+		set_code(pos, button)
 		codelen = 1
 	end
 	meta:set_string("formspec", digipad.digipad_formspec.."label[1,0;"..digipad.hidecode(codelen).."]")
@@ -56,27 +72,28 @@ end
 -- accept or cancel
 local function press_aoc(pos, meta, accept)
 	if accept then
-		local code = meta:get_string("code")
+		local code = get_code(pos)
 		if code == "" then
 			return
 		end
 		digipad.submit(pos, meta:get_string("baseChannel")..meta:get_string("channelExt"), code)
 		meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-		meta:set_string("code", "")
+		remove_code(pos)
 		return
 	end
 	meta:set_string("formspec", digipad.digipad_formspec.."label[0,0;Enter Code:]")
-	meta:set_string("code", "")
+	remove_code(pos)
 end
 
 digipad.recvFields = function(pos, _, fields)
 	local meta = minetest.get_meta(pos)
-	if fields.dcC then -- Cancel button
-		press_aoc(pos, meta)
-		return
-	end
 	if fields.dcA then  --Accept button
 		press_aoc(pos, meta, true)
+		return
+	end
+	if fields.dcC -- Cancel button
+	or fields.quit then
+		press_aoc(pos, meta)
 		return
 	end
 	for i = 1,3 do -- Channel button
@@ -89,7 +106,7 @@ digipad.recvFields = function(pos, _, fields)
 	local id = next(fields)
 	local button = fields[id]
 	if "dc"..button ~= id then
-		return -- ESC pressed
+		return -- this shouldnt happen
 	end
 	press_number_button(pos, meta, button)
 end
@@ -233,7 +250,7 @@ minetest.register_node("digipad:digipad", {
 		type = "fixed",
 		fixed = { -6/16, -.5, 6/16, 6/16, .5, .5 }
 	},
-	groups = {choppy = 3, dig_immediate = 2},
+	groups = {choppy = 3, dig_immediate = 2, level = 3},
 	sounds = default.node_sound_stone_defaults(),
 	on_construct = function(pos)	--Initialize some variables (local per instance)
 		digipad.cons(pos)
