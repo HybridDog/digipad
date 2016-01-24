@@ -23,7 +23,7 @@ end
 
 digipad.submit = function (pos, channel, number)
 	--minetest.chat_send_player("singleplayer", "Code is "..number)
-	digiline:receptor_send(pos, digiline.rules.default, channel, tonumber(number))
+	digiline:receptor_send(pos, digiline.rules.default, channel, number)
 end
 
 digipad.cons = function(pos)
@@ -289,7 +289,7 @@ minetest.register_node("digipad:digipad_hard", {
 		fixed = { -0.5, -.5, 1/4, 0.5, .5, 0.5}
 	},
 	inventory_image="digipad_hard_front.png",
-	groups = {cracky=1,level=2},
+	groups = {cracky=1, level=2},
 	on_construct = function(pos)
 		local meta = minetest.get_meta(pos)
 		digipad.cons(pos)
