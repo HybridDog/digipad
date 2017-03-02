@@ -1,5 +1,7 @@
 digipad = {}
-dofile(minetest.get_modpath("digipad").."/terminal.lua")  -- add terminal to mod
+if minetest.setting_getbool("digipad_terminal") then
+	dofile(minetest.get_modpath("digipad").."/terminal.lua")  -- add terminal to mod
+end
 -- ========================
 --Declare shared variables / functions
 -- ========================
