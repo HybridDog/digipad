@@ -1,0 +1,2 @@
+#Enable the old terminal and keyboard.
+digipad_terminal (Enable Terminal) bool false
