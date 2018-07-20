@@ -79,8 +79,10 @@ end
 
 
 
-local on_digiline_receive = function (pos, _,_, msg)
-	digipad.new_line(pos, msg)
+local function on_digiline_receive(pos, _,_, msg)
+	if msg then
+		digipad.new_line(pos, msg)
+	end
 end
 
 digipad.new_line = function(pos, text)
@@ -117,7 +119,7 @@ minetest.register_node("digipad:keyb", {
 	walkable = true,
 	digiline =
 		{
-			receptor={},
+			receptor={action=function()end},
 			effector={},
 		},
 	tiles = {
@@ -198,7 +200,7 @@ minetest.register_node("digipad:terminal", {
 	},
 	digiline =
 		{
-			receptor={},
+			receptor={action=function()end},
 			effector = {
 				action = on_digiline_receive
 			},
