@@ -1,5 +1,5 @@
 digipad = {}
-if minetest.setting_getbool("digipad_terminal") then
+if minetest.settings:get_bool("digipad_terminal") then
 	dofile(minetest.get_modpath("digipad").."/terminal.lua")  -- add terminal to mod
 end
 -- ========================
@@ -130,8 +130,8 @@ local function punch_pad(pos, node, puncher, pt)
 	local dir = puncher:get_look_dir()
 	local dist = vector.new(dir)
 
-	local plpos = puncher:getpos()
-	plpos.y = plpos.y+1.625
+	local plpos = puncher:get_pos()
+	plpos.y = plpos.y + puncher:get_properties().eye_height
 
 	local newtime,a,b,c,mpa,mpc
 	b = "y"
@@ -155,9 +155,17 @@ local function punch_pad(pos, node, puncher, pt)
 		return
 	end
 
+	-- the hard and the normal vary in thickness
+	local pad_surface
+	if node.name == "digipad:digipad" then
+		pad_surface = 6/16
+	else
+		pad_surface = 4/16
+	end
+
 	mpa = mpa or 1
 	mpc = mpc or 1
-	local shpos = {[a]=pos[a], [b]=pos[b], [c]=pos[c]+6/16*mpc}
+	local shpos = {[a]=pos[a], [b]=pos[b], [c]=pos[c]+pad_surface*mpc}
 
 	dist[c] = shpos[c]-plpos[c]
 	local m = dist[c]/dir[c]
