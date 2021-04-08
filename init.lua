@@ -244,6 +244,7 @@ minetest.register_node("digipad:digipad", {
 		"digicode_side.png",
 		"digicode_front.png"
 	},
+	use_texture_alpha = minetest.features.use_texture_alpha_string_modes and "opaque" or nil,
 	drawtype = "nodebox",
 	paramtype = "light",
 	paramtype2 = "facedir",
